@@ -1,0 +1,1 @@
+MCP stands for Model Context Protocol.
