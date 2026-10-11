@@ -1,26 +1,19 @@
-from typing import TypedDict
-from langgraph.graph import StateGraph, START, END
+from langchain.agents import create_agent
+from langgraph.checkpoint.memory import InMemorySaver
+
+from mcp_config import mcp_client
 from llm import llm
 
 
-class AgentState(TypedDict):
-    query: str
-    response: str
+async def create_mcp_agent():
+    tools = await mcp_client.get_tools()
 
+    checkpointer = InMemorySaver()
 
-def agent_node(state: AgentState):
-    result = llm.invoke(state["query"])
+    agent = create_agent(
+        model=llm,
+        tools=tools,
+        checkpointer=checkpointer
+    )
 
-    return {
-        "response": result.content
-    }
-
-
-builder = StateGraph(AgentState)
-
-builder.add_node("agent", agent_node)
-
-builder.add_edge(START, "agent")
-builder.add_edge("agent", END)
-
-graph = builder.compile()
+    return agent

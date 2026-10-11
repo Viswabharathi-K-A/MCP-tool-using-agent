@@ -1,1 +1,6 @@
-MCP stands for Model Context Protocol.
+Topic: Model Context Protocol (MCP)
+
+MCP is a protocol that allows AI applications to communicate with external tools and data sources.
+
+Research task:
+Find the latest information about MCP and explain how it supports AI agents.
