@@ -16,4 +16,12 @@ node_modules/
 test_*.py
 tests/
 
+.coverage
+htmlcov/
+*.egg-info/
+
+README.md
+PROCESS_LOG.md
+
+
 Assignment_1_Description.pdf
