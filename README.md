@@ -259,6 +259,18 @@ $body = @{ query = 'Explain MCP in one sentence.'; session_id = 'readme-smoke-te
 (Invoke-RestMethod -Uri "$URL/chat" -Method Post -ContentType 'application/json' -Body $body).response
 ```
 
+### Deployment script
+
+The `deploy.sh` script builds and publishes the Docker image using Google Cloud Build, then deploys the application to Google Cloud Run. API credentials are supplied through Google Secret Manager.
+
+Run the script from the project root using Bash (for example, Git Bash on Windows):
+
+```bash
+bash deploy.sh
+```
+
+The script targets the `csci599-mcp-agent-2026` project in the `us-west1` region and requires authenticated `gcloud` access and existing Secret Manager secrets.
+
 ### Deployment procedure
 
 1. Authenticate `gcloud`, select the correct project, and enable the required Google Cloud services.
