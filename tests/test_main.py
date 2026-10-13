@@ -8,6 +8,23 @@ from langchain_core.messages import AIMessage, HumanMessage
 from main import app, extract_final_text
 
 
+def test_startup_connection_failure_is_graceful(monkeypatch):
+    monkeypatch.setattr("main.create_mcp_agent", AsyncMock(side_effect=ConnectionError("MCP unavailable")))
+    with TestClient(app) as client:
+        response = client.post("/chat", json={"query": "Hello", "session_id": "startup"})
+        assert response.status_code == 503
+    assert app.state.agent is None
+
+
+@pytest.mark.parametrize("result", [None, {}, {"messages": []}])
+def test_chat_malformed_agent_result(monkeypatch, result):
+    mock_agent = AsyncMock()
+    mock_agent.ainvoke.return_value = result
+    monkeypatch.setattr(app.state, "agent", mock_agent, raising=False)
+    response = TestClient(app).post("/chat", json={"query": "Hello", "session_id": "malformed"})
+    assert response.status_code == 503
+
+
 # ----------------------------------------
 # Response extraction tests
 # ----------------------------------------

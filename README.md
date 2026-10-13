@@ -90,6 +90,8 @@ The deployed configuration uses **Secret Manager**, rather than embedding creden
 
 **Weather MCP:** Provides weather and related utilities. The deployed `get_current_weather` call was confirmed in Cloud Run logs.
 
+Weather MCP adds structured, location-specific weather data alongside general web search and file operations. It lets the agent answer weather questions directly and combine current conditions with research or saved notes when a request needs multiple tools.
+
 The three servers are launched through the MCP client and use real protocol discovery and invocation (`tools/list`, `tools/call`).
 
 ### External MCP server attribution
@@ -142,6 +144,7 @@ Prerequisites: Python 3.13, Node.js/npm, working `npx`, and valid OpenAI and Tav
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+python -m pip install pytest
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
@@ -192,7 +195,7 @@ Run the local automated suite:
 python -m pytest tests/ -v
 ```
 
-**Local automated test result:** 21 tests passed. These tests exercise validation, response extraction, API behavior, and MCP handling using mocked components; they do not by themselves prove live MCP invocation.
+**Local automated test result:** 26 tests passed. These tests exercise validation, response extraction, API behavior, MCP handling, sequential tool calls, and session isolation using mocked components; they do not by themselves prove live MCP invocation or GPT-5's tool choices. The suite disables `.env` loading, replaces the LLM with an offline model, and blocks external socket connections.
 
 **Separately verified on deployed Cloud Run:**
 
