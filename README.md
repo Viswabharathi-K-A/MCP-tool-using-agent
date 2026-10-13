@@ -41,7 +41,7 @@ flowchart TD
     API2 --> U2["Client"]
 ```
 
-The loop-back from the MCP result to GPT-5 is intentional: the agent can reason over a tool result, invoke another tool, or finish with an answer. Tools are discovered through the MCP client rather than replaced by hard-coded responses.
+After a tool response, control returns to GPT-5: the agent can reason over a tool result, invoke another tool, or finish with an answer. Tools are discovered through the MCP client rather than replaced by hard-coded responses.
 
 ## 3. Deployment topology
 
@@ -57,9 +57,11 @@ flowchart TD
     RUN --> OPENAI["OpenAI GPT-5 API"]
     ENV --> LOCAL["Local FastAPI or Docker runtime"]
     LOCAL --> OPENAI
+    LOCAL --> TAVILY["Tavily Search API"]
+    RUN --> TAVILY
 ```
 
-The deployed configuration uses **Secret Manager**, rather than embedding credentials in the Docker image or source repository. This differs from the assignment's example deployment command that passes shell variables directly with `--set-env-vars`.
+The deployed configuration uses **Secret Manager**, rather than embedding credentials in the Docker image or source repository. Local development uses `.env`, while Cloud Run receives its API credentials as secret-backed environment variables.
 
 ## 4. Technology stack
 
@@ -130,7 +132,7 @@ TAVILY_API_KEY=replace_with_your_key
 DEBUG_TOOL_OUTPUT=false
 ```
 
-Never commit `.env`, print API keys in logs, or include credentials in the source ZIP. In Cloud Run, the two API keys are supplied from Secret Manager secrets named `openai-api-key` and `tavily-api-key`.
+Keep `.env` out of version control and avoid logging API credentials. In Cloud Run, the two API keys are supplied from Secret Manager secrets named `openai-api-key` and `tavily-api-key`.
 
 ## 8. Local setup and execution
 
@@ -204,7 +206,7 @@ python -m pytest tests/ -v
 | Memory across two requests with the same session | Passed |
 | MCP invocation evidence in Cloud Run logs | Passed |
 
-The logs identified `list_directory`, `get_current_weather`, and `tavily_search` tool calls with successful results. Tests involving GPT-5 and Tavily can consume paid API credits.
+The logs identified `list_directory`, `get_current_weather`, and `tavily_search` tool calls with successful results. 
 
 ## 11. Docker
 
@@ -266,9 +268,7 @@ $body = @{ query = 'Explain MCP in one sentence.'; session_id = 'readme-smoke-te
 5. Inject `OPENAI_API_KEY` and `TAVILY_API_KEY` from Secret Manager; do not pass literal credentials in commands or source code.
 6. Verify `/chat`, MCP tools, and memory through the public URL, then inspect Cloud Run logs.
 
-The deployment uses Cloud Build, Artifact Registry, Cloud Run, and Secret Manager. `deploy.sh` is the deployment helper script included with the source code.
-
-**Keep the Cloud Run service reachable until grades are posted**, as required by the assignment.
+The deployment uses Cloud Build, Artifact Registry, Cloud Run, and Secret Manager.
 
 ## 13. Cost and security notes
 
@@ -282,7 +282,3 @@ Avoid logging sensitive headers or secrets. Rotate credentials if exposed, then 
 - Cloud Run filesystem writes are ephemeral.
 - Additional end-to-end and failure-injection tests would improve coverage.
 - A persistent checkpointer and durable file storage would be needed for production use.
-
-## 15. Submission artifacts
-
-Submit the **live Cloud Run URL**, **source ZIP**, **README.md**, and **PROCESS_LOG.md** as required by the assignment. Include the three diagrams, canonical source filenames, and deployment script in the ZIP. Exclude `.env`, virtual environments, `node_modules`, caches, and all API credentials. The process log records development decisions, AI assistance, testing, and debugging.
