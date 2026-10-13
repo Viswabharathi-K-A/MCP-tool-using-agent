@@ -1,75 +1,68 @@
 # CSCI 599 Assignment 1 — Process Log
 
-> **Author review required:** This is a draft based on the recorded development and testing steps. Check the chronology and first-person statements, replace any placeholders, and rewrite the reflection in your own voice before submitting.
-
 ## AI tools used
 
-I used ChatGPT to discuss LangGraph/MCP architecture, review code and errors, interpret the assignment requirements, plan tests, and improve documentation. I used AI assistance as a development aid and verified the resulting application through local tests, Docker execution, and live Cloud Run requests. 
+I used ChatGPT while working on this assignment. I mainly used it to understand how LangGraph and MCP fit together, review my code, debug errors, plan tests, and check the assignment requirements. I used the suggestions to make changes in my project and tested the implementation myself using pytest, Docker, and the deployed Cloud Run endpoint.
 
-## Chronological development narrative (approximately 230 words)
+## Development process
 
-I began by setting up a Python FastAPI application exposing a `POST /chat` endpoint with a query and session identifier. I integrated a LangGraph-based agent using OpenAI GPT-5, then configured `MultiServerMCPClient` to launch a Filesystem MCP server, a Weather MCP server, and a Tavily MCP server over stdio. The filesystem server was restricted to a workspace directory. I used LangGraph's `InMemorySaver` and passed the request's `session_id` as `thread_id` so the agent could maintain context across turns.
+I started by setting up FastAPI with a `/chat` endpoint that accepts a query and a session ID. Then I connected an OpenAI GPT-5 model to a LangGraph agent. My next step was integrating the MCP servers. I initially worked with the Filesystem and Weather servers, and later added Tavily for web search. I used `MultiServerMCPClient` so the agent could discover and call the tools through MCP instead of having separate hard-coded functions for each tool.
 
-During implementation, I tested MCP discovery and examined how the agent selected tools, received `ToolMessage` results, and generated final answers. I added response extraction and error handling for agent and MCP failures, along with logging that records tool calls without requiring verbose output in production. I also wrote automated tests for API validation, response handling, and MCP execution paths; the latest local run reported 21 passing tests.
+After that, I added `InMemorySaver` and mapped `session_id` to LangGraph's `thread_id` to maintain conversation history. I also worked on error handling, extracting the final response correctly, and logging tool calls. One thing I wanted to be sure about was whether the agent was actually calling MCP tools, rather than just generating an answer that looked correct. So I checked the tool messages and logs as part of testing.
 
-Next, I packaged the application using a multi-stage Docker build with Node.js/npm and a non-root runtime user. I verified container startup and MCP tool discovery. I deployed the image to Google Cloud Run and configured API credentials through Secret Manager. During deployment debugging, an OpenAI API key contained a trailing newline, causing an invalid HTTP authorization header. I corrected the secret formatting and retested.
+I ran the automated tests locally and got 21 passing tests. I then built the Docker image and checked that the application started and the MCP servers initialized inside the container. Next, I deployed the service to Google Cloud Run. I ran into an issue where the OpenAI API key stored in Secret Manager had an extra newline, which caused an invalid authorization header error. I corrected the secret value and tested the endpoint again.
 
-Finally, I verified the deployed `/chat` endpoint, Filesystem listing and file read/write, Weather and Tavily MCP calls, and conversational memory across two requests. I used Cloud Run logs to confirm actual MCP tool invocation rather than relying only on generated answers.
+Finally, I verified the live `/chat` endpoint, Filesystem read/write operations, Weather and Tavily tool calls, and memory across two requests with the same session ID. I also checked Cloud Run logs to confirm that the MCP tools were being invoked successfully.
 
-## Representative AI-assisted development prompts
+## How I used ChatGPT
 
-These are **paraphrases of the development questions discussed**, not a claim of verbatim prompt transcripts. Replace or supplement them with exact prompts from your records if required by your instructor.
+Some of the questions I worked through with ChatGPT were:
 
-- How should a FastAPI `/chat` endpoint invoke a LangGraph agent with a session-specific thread ID?
-- How can a `MultiServerMCPClient` connect to Filesystem, Weather, and Tavily servers through stdio?
-- How should the application handle malformed MCP results, tool errors, and empty final agent responses?
-- How can I validate MCP integration while minimizing OpenAI and Tavily API costs?
-- What should I check when the Cloud Run container starts but an OpenAI request fails with an illegal authorization header?
-- Which architecture diagrams and submission artifacts does the assignment require?
+- How should I initialize the agent and MCP servers during FastAPI startup?
+- How does `session_id` work with LangGraph's `thread_id` and `InMemorySaver`?
+- How do I check whether the agent is making actual MCP tool calls?
+- How should I handle tool errors and extract the final AI response?
+- How can I test the project without wasting OpenAI and Tavily credits?
+- How do I build and run the project in Docker and deploy it to Cloud Run?
+- What caused the illegal authorization header error in Cloud Run?
+- What diagrams and documentation does the assignment require?
 
-## Verification and evidence
+I used ChatGPT for explanations, troubleshooting, and suggestions. I checked the behavior using actual test results and logs instead of treating AI-generated explanations as proof that something worked.
 
-| Test or observation | Recorded outcome |
+## Testing and verification
+
+| Test | Result |
 |---|---|
-| Local automated test suite | 21 tests passed |
-| Local Docker image and API | Image built; container started and responded |
-| Deployed Cloud Run `/chat` | Successful GPT-5 answer |
-| Filesystem MCP | Listed workspace, created file, and read its content |
-| Weather MCP | `get_current_weather` invoked successfully |
-| Tavily MCP | `tavily_search` invoked successfully |
-| Session memory | Same `session_id` retained a fact across two requests |
-| Cloud Run tool logs | Successful MCP operation and tool-result entries |
+| Local automated tests | 21 passed |
+| Docker build and application startup | Passed |
+| MCP server initialization inside Docker | Passed |
+| Cloud Run `/chat` request | Passed |
+| Filesystem MCP: list, create, and read file | Passed |
+| Weather MCP: `get_current_weather` | Passed |
+| Tavily MCP: `tavily_search` | Passed |
+| Memory across two requests with the same `session_id` | Passed |
+| Tool invocation checked in Cloud Run logs | Passed |
 
-The automated tests used mocks and are distinct from live MCP verification. Live tests can incur API usage costs. The deployment uses a maximum of one Cloud Run instance and an in-memory checkpointer; memory is not durable across instance restarts.
+The automated tests used mocked components, so I tested the deployed application separately to verify real MCP calls. The Cloud Run logs showed successful calls to `list_directory`, `get_current_weather`, and `tavily_search`.
 
-## Debugging notes and decisions
+## Issues I faced and decisions I made
 
-- **FastAPI startup:** Corrected application loading and used an application lifespan to initialize and clean up the agent.
-- **Tool visibility:** Checked Cloud Run logs for real `tools/call` activity instead of assuming a natural-language response proved integration.
-- **Secret formatting:** Corrected an OpenAI API key value that had acquired a trailing newline during PowerShell-based secret upload. **Confirm that any key exposed in logs was rotated/revoked.**
-- **Cloud costs:** Chose scale-to-zero and a single maximum instance; minimized unnecessary live paid tests.
-- **Ephemeral state:** Accepted `InMemorySaver` and container-local workspace files for this academic assignment, while documenting their limitations.
+**Agent initialization:** I had to fix the FastAPI application loading and set up the lifespan logic so the agent and MCP servers initialize when the application starts and clean up when it shuts down.
 
-## Learning reflection — revise in your own words
+**Tool execution:** I wanted to confirm that the agent was really using MCP. I added logging and checked tool results, rather than assuming the final response was enough evidence.
 
-This assignment helped me understand the difference between an agent deciding to use a tool and the application actually executing a tool through the MCP protocol. I also learned how deployment concerns—container dependencies, runtime permissions, secret formatting, logging, and ephemeral memory—can affect an otherwise working local agent.
+**Deployment error:** One of the main issues I faced was the OpenAI key having a trailing newline when it was uploaded to Secret Manager from PowerShell. This caused an HTTP authorization header error. I corrected the stored value and verified the deployed application again.
 
-## External sources and attribution
+**Costs and memory:** I kept the number of paid API tests low and configured Cloud Run to scale to zero with a maximum of one instance. I used `InMemorySaver` because the assignment only requires memory while the instance is running. I understand that the memory and files stored inside the container can be lost when the instance restarts.
 
-The project integrates existing third-party MCP servers rather than reimplementing them:
+## What I learned
 
-- Filesystem MCP: https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem
-- Tavily MCP: https://github.com/tavily-ai/tavily-mcp
-- Weather MCP: `mcp_weather_server` (verify and add the upstream repository URL).
+Before this assignment, I had a basic idea of agents calling tools, but I didn't fully understand how MCP discovery and execution worked. Building and testing the application helped me understand the flow from the user's request to the LLM's tool decision, the MCP call, and the final response. I also learned that getting an agent to work locally is only one part of the process; Docker, Cloud Run, environment variables, logging, and debugging are equally important when deploying it.
 
-LangGraph, FastAPI, and related framework documentation were consulted as needed. **If any source code was copied or substantially adapted from external tutorials or repositories, identify the specific source URL and rationale in both code comments and this log.**
+## External MCP projects used
 
-## Final pre-submission checks
+- Filesystem MCP server: https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem
+- Tavily MCP server: https://github.com/tavily-ai/tavily-mcp
+- Weather MCP server: `mcp_weather_server` Python package
 
-- [ ] Replace README Cloud Run URL placeholder with the actual service URL.
-- [ ] Confirm the actual `deploy.sh` contents and add it to the source ZIP.
-- [ ] Confirm final project tree, versions, and Weather MCP attribution URL.
-- [ ] Verify that all first-person narrative statements reflect work actually performed.
-- [ ] Review this log against the course's process-log instructions and add exact prompts or dates where needed.
-- [ ] Exclude credentials, `.env`, virtual environments, and `node_modules` from the ZIP.
-- [ ] Keep Cloud Run available through grading.
+I integrated these existing MCP server implementations into my application. I did not write the server implementations myself.

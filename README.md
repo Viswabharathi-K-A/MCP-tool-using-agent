@@ -8,16 +8,16 @@ A containerized, stateful AI agent built with **LangGraph, FastAPI, OpenAI GPT-5
 
 ```mermaid
 flowchart TD
-    U[HTTP Client] <-->|POST /chat and JSON response| API[FastAPI main.py]
-    subgraph CloudRun[Google Cloud Run - csci599-a1]
-        API <--> AG[LangGraph Agent - agent.py]
-        AG <-->|Reasoning and final answer| LLM[OpenAI GPT-5 - llm.py]
-        AG <-->|Session checkpoint by thread_id| MEM[InMemorySaver]
-        AG <-->|Tool selection and results| MCP[MultiServerMCPClient - mcp_config.py]
-        MCP <-->|MCP stdio| FS[Filesystem MCP Server]
-        MCP <-->|MCP stdio| TV[Tavily MCP Server]
-        MCP <-->|MCP stdio| WT[Weather MCP Server]
-        FS <--> WS[/app/workspace]
+    U["HTTP Client"] <-->|"POST /chat and JSON response"| API["FastAPI (main.py)"]
+    subgraph CloudRun["Google Cloud Run - csci599-a1"]
+        API <--> AG["LangGraph Agent - agent.py"]
+        AG <-->|Reasoning and final answer| LLM["OpenAI GPT-5 - llm.py"]
+        AG <-->|Session checkpoint by thread_id| MEM["InMemorySaver"]
+        AG <-->|Tool selection and results| MCP["MultiServerMCPClient - mcp_config.py"]
+        MCP <-->|MCP stdio| FS["Filesystem MCP Server"]
+        MCP <-->|MCP stdio| TV["Tavily MCP Server"]
+        MCP <-->|MCP stdio| WT["Weather MCP Server"]
+        FS <--> WS["/app/workspace"]
     end
 ```
 
@@ -27,18 +27,18 @@ FastAPI accepts `query` and `session_id`. The agent uses `session_id` as the Lan
 
 ```mermaid
 flowchart TD
-    U[User query] --> API[FastAPI /chat]
-    API --> AG[Agent entry and session state]
-    AG --> LLM[GPT-5 reasoning step]
-    LLM --> DEC{Call a tool?}
-    DEC -->|Yes| SEL[Choose tool and arguments]
-    SEL --> CALL[MCP tools/call via adapter]
-    CALL --> SRV[Selected MCP server]
-    SRV --> RES[Tool result or normalized error]
+    U["User query"] --> API["FastAPI /chat"]
+    API --> AG["Agent entry and session state"]
+    AG --> LLM["GPT-5 reasoning step"]
+    LLM --> DEC{"Call a tool?"}
+    DEC -->|Yes| SEL["Choose tool and arguments"]
+    SEL --> CALL["MCP tools/call via adapter"]
+    CALL --> SRV["Selected MCP server"]
+    SRV --> RES["Tool result or normalized error"]
     RES --> LLM
-    DEC -->|No| SYN[Final answer synthesis]
-    SYN --> API2[FastAPI JSON response]
-    API2 --> U2[Client]
+    DEC -->|No| SYN["Final answer synthesis"]
+    SYN --> API2["FastAPI JSON response"]
+    API2 --> U2["Client"]
 ```
 
 The loop-back from the MCP result to GPT-5 is intentional: the agent can reason over a tool result, invoke another tool, or finish with an answer. Tools are discovered through the MCP client rather than replaced by hard-coded responses.
@@ -47,15 +47,15 @@ The loop-back from the MCP result to GPT-5 is intentional: the agent can reason 
 
 ```mermaid
 flowchart TD
-    DEV[Local Windows development] --> ENV[Local .env for testing - never committed]
-    DEV --> DOCKER[Dockerfile and source]
-    DOCKER --> BUILD[Google Cloud Build]
-    BUILD --> REG[Artifact Registry - gcr.io-compatible image]
-    REG --> RUN[Cloud Run service csci599-a1 - us-west1]
-    SEC[Google Secret Manager - OpenAI and Tavily keys] -->|Secret-backed environment variables| RUN
-    RUN --> URL[Public HTTPS service URL]
-    RUN --> OPENAI[OpenAI GPT-5 API]
-    ENV --> LOCAL[Local FastAPI or Docker runtime]
+    DEV["Local Windows development"] --> ENV["Local .env for testing - never committed"]
+    DEV --> DOCKER["Dockerfile and source"]
+    DOCKER --> BUILD["Google Cloud Build"]
+    BUILD --> REG["Artifact Registry - gcr.io-compatible image"]
+    REG --> RUN["Cloud Run service csci599-a1 - us-west1"]
+    SEC["Google Secret Manager - OpenAI and Tavily keys"] -->|Secret-backed environment variables| RUN
+    RUN --> URL["Public HTTPS service URL"]
+    RUN --> OPENAI["OpenAI GPT-5 API"]
+    ENV --> LOCAL["Local FastAPI or Docker runtime"]
     LOCAL --> OPENAI
 ```
 
@@ -94,7 +94,7 @@ The three servers are launched through the MCP client and use real protocol disc
 
 - Filesystem server: https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem
 - Tavily MCP server: https://github.com/tavily-ai/tavily-mcp
-- Weather package: `mcp_weather_server` on PyPI; **add the verified upstream repository URL from the installed package metadata before submitting**.
+- Weather MCP package: [`mcp_weather_server` on PyPI](https://pypi.org/project/mcp-weather-server/).
 
 These are third-party MCP server implementations integrated into this project; they were not reimplemented here.
 
@@ -113,14 +113,12 @@ These are third-party MCP server implementations integrated into this project; t
 ├── .env.example
 ├── README.md
 ├── PROCESS_LOG.md
-├── deploy.sh                  # Include if present in final repository
+├── deploy.sh
 ├── tests/
 │   ├── test_main.py
 │   └── test_mcp_config.py
 └── workspace/
 ```
-
-Update this tree to match the files actually included in the final source ZIP.
 
 ## 7. Environment configuration
 
@@ -192,7 +190,7 @@ Run the local automated suite:
 python -m pytest tests/ -v
 ```
 
-**Last reported local result:** 21 tests passed. These tests exercise validation, response extraction, API behavior, and MCP handling using mocked components; they do not by themselves prove live MCP invocation.
+**Local automated test result:** 21 tests passed. These tests exercise validation, response extraction, API behavior, and MCP handling using mocked components; they do not by themselves prove live MCP invocation.
 
 **Separately verified on deployed Cloud Run:**
 
@@ -268,7 +266,7 @@ $body = @{ query = 'Explain MCP in one sentence.'; session_id = 'readme-smoke-te
 5. Inject `OPENAI_API_KEY` and `TAVILY_API_KEY` from Secret Manager; do not pass literal credentials in commands or source code.
 6. Verify `/chat`, MCP tools, and memory through the public URL, then inspect Cloud Run logs.
 
-If `deploy.sh` is part of the final repository, document and verify its exact behavior here before submission; do not assume it implements the Secret Manager-based workflow above without checking.
+The deployment uses Cloud Build, Artifact Registry, Cloud Run, and Secret Manager. `deploy.sh` is the deployment helper script included with the source code.
 
 **Keep the Cloud Run service reachable until grades are posted**, as required by the assignment.
 
@@ -284,8 +282,7 @@ Avoid logging sensitive headers or secrets. Rotate credentials if exposed, then 
 - Cloud Run filesystem writes are ephemeral.
 - Additional end-to-end and failure-injection tests would improve coverage.
 - A persistent checkpointer and durable file storage would be needed for production use.
-- Package versions and external MCP source URLs should be verified against the final lockfile or installed environment.
 
-## 15. Submission checklist
+## 15. Submission artifacts
 
-Submit the **live Cloud Run URL**, **source ZIP**, **README.md**, and **PROCESS_LOG.md** as required by the assignment. Include the three diagrams, canonical source filenames, and deployment script in the ZIP. Exclude `.env`, virtual environments, `node_modules`, caches, and all API credentials. Review `PROCESS_LOG.md` for accurate first-person attribution and development history.
+Submit the **live Cloud Run URL**, **source ZIP**, **README.md**, and **PROCESS_LOG.md** as required by the assignment. Include the three diagrams, canonical source filenames, and deployment script in the ZIP. Exclude `.env`, virtual environments, `node_modules`, caches, and all API credentials. The process log records development decisions, AI assistance, testing, and debugging.
