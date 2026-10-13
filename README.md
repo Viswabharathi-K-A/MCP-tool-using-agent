@@ -119,6 +119,8 @@ These are third-party MCP server implementations integrated into this project; t
 ├── PROCESS_LOG.md
 ├── deploy.sh
 ├── tests/
+│   ├── conftest.py
+│   ├── test_agent.py
 │   ├── test_main.py
 │   └── test_mcp_config.py
 └── workspace/
@@ -196,6 +198,8 @@ python -m pytest tests/ -v
 ```
 
 **Local automated test result:** 26 tests passed. These tests exercise validation, response extraction, API behavior, MCP handling, sequential tool calls, and session isolation using mocked components; they do not by themselves prove live MCP invocation or GPT-5's tool choices. The suite disables `.env` loading, replaces the LLM with an offline model, and blocks external socket connections.
+
+`test_agent.py` checks sequential tool calls, conversation history across turns, session isolation, and a no-tool turn using a scripted model. `test_main.py` covers request validation, response extraction, endpoint behavior, startup connection failure, and malformed agent results. `test_mcp_config.py` covers successful MCP execution, connection failures, invalid results, and server-reported errors. `conftest.py` provides the shared offline model and network isolation.
 
 **Separately verified on deployed Cloud Run:**
 
