@@ -4,7 +4,7 @@
 
 ## AI tools used
 
-I used ChatGPT to discuss LangGraph/MCP architecture, review code and errors, interpret the assignment requirements, plan tests, and improve documentation. I used AI assistance as a development aid and verified the resulting application through local tests, Docker execution, and live Cloud Run requests. **Add any other AI tools actually used (for example, Codex) and describe their contributions; do not list tools that were not used.**
+I used ChatGPT to discuss LangGraph/MCP architecture, review code and errors, interpret the assignment requirements, plan tests, and improve documentation. I used AI assistance as a development aid and verified the resulting application through local tests, Docker execution, and live Cloud Run requests. 
 
 ## Chronological development narrative (approximately 230 words)
 
