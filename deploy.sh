@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# CSCI 599 Assignment 1 - build and deploy the MCP agent to Cloud Run.
+# Build and deploy the MCP agent to Cloud Run.
 # Prerequisites: gcloud CLI authenticated, billing enabled, APIs enabled,
 # existing Secret Manager secrets, and permission to build/deploy.
 
-PROJECT_ID="csci599-mcp-agent-2026"
-REGION="us-west1"
-SERVICE="csci599-a1"
+: "${PROJECT_ID:?Set PROJECT_ID to your Google Cloud project ID}"
+REGION="${REGION:-us-west1}"
+SERVICE="${SERVICE:-mcp-agent}"
 IMAGE="gcr.io/${PROJECT_ID}/${SERVICE}:latest"
 
 command -v gcloud >/dev/null 2>&1 || { echo "Error: gcloud CLI is not installed." >&2; exit 1; }

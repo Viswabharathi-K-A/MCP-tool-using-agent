@@ -1,8 +1,8 @@
-# CSCI 599 Assignment 1 — Process Log
+# Development Process Log
 
 ## AI tools used
 
-I used ChatGPT while working on this assignment. I mainly used it to understand how LangGraph and MCP fit together, review my code, debug errors, plan tests, and check the assignment requirements. I used the suggestions to make changes in my project and tested the implementation myself using pytest, Docker, and the deployed Cloud Run endpoint.
+I used ChatGPT while developing this project. I mainly used it to understand how LangGraph and MCP fit together, review my code, debug errors, plan tests, and review the implementation requirements. I used the suggestions to make changes in my project and tested the implementation myself using pytest, Docker, and the deployed Cloud Run endpoint.
 
 ## Development process
 
@@ -25,7 +25,6 @@ Some of the questions I worked through with ChatGPT were:
 - How can I test the project without wasting OpenAI and Tavily credits?
 - How do I build and run the project in Docker and deploy it to Cloud Run?
 - What caused the illegal authorization header error in Cloud Run?
-- What diagrams and documentation does the assignment require?
 
 I used ChatGPT for explanations, troubleshooting, and suggestions. I checked the behavior using actual test results and logs instead of treating AI-generated explanations as proof that something worked.
 
@@ -53,11 +52,11 @@ The automated tests used mocked components, so I tested the deployed application
 
 **Deployment error:** One of the main issues I faced was the OpenAI key having a trailing newline when it was uploaded to Secret Manager from PowerShell. This caused an HTTP authorization header error. I corrected the stored value and verified the deployed application again.
 
-**Costs and memory:** I kept the number of paid API tests low and configured Cloud Run to scale to zero with a maximum of one instance. I used `InMemorySaver` because the assignment only requires memory while the instance is running. I understand that the memory and files stored inside the container can be lost when the instance restarts.
+**Costs and memory:** I kept the number of paid API tests low and configured Cloud Run to scale to zero with a maximum of one instance. I used `InMemorySaver` to maintain conversation history while the instance is running. I understand that the memory and files stored inside the container can be lost when the instance restarts.
 
 ## What I learned
 
-Before this assignment, I had a basic idea of agents calling tools, but I didn't fully understand how MCP discovery and execution worked. Building and testing the application helped me understand the flow from the user's request to the LLM's tool decision, the MCP call, and the final response. I also learned that getting an agent to work locally is only one part of the process; Docker, Cloud Run, environment variables, logging, and debugging are equally important when deploying it.
+Before this project, I had a basic idea of agents calling tools, but I didn't fully understand how MCP discovery and execution worked. Building and testing the application helped me understand the flow from the user's request to the LLM's tool decision, the MCP call, and the final response. I also learned that getting an agent to work locally is only one part of the process; Docker, Cloud Run, environment variables, logging, and debugging are equally important when deploying it.
 
 ## External MCP projects used
 

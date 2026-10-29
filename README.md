@@ -1,15 +1,14 @@
-# CSCI 599 Assignment 1 — LangGraph Agent with MCP Tools
+# LangGraph Agent with MCP Tools
 
 A containerized, stateful AI agent built with **LangGraph, FastAPI, OpenAI GPT-5, and Model Context Protocol (MCP)**. The agent selects tools exposed by three independently launched MCP servers—Filesystem, Tavily Search, and Weather—and is deployed as an HTTP service on **Google Cloud Run**.
 
-> **Live Cloud Run URL:** https://csci599-a1-b7rvvpibna-uw.a.run.app  
 
 ## 1. System architecture
 
 ```mermaid
 flowchart TD
     U["HTTP Client"] <-->|"POST /chat and JSON response"| API["FastAPI (main.py)"]
-    subgraph CloudRun["Google Cloud Run - csci599-a1"]
+    subgraph CloudRun["Google Cloud Run - mcp-agent"]
         API <--> AG["LangGraph Agent - agent.py"]
         AG <-->|Reasoning and final answer| LLM["OpenAI GPT-5 - llm.py"]
         AG <-->|Session checkpoint by thread_id| MEM["InMemorySaver"]
@@ -51,7 +50,7 @@ flowchart TD
     DEV --> DOCKER["Dockerfile and source"]
     DOCKER --> BUILD["Google Cloud Build"]
     BUILD --> REG["Artifact Registry - gcr.io-compatible image"]
-    REG --> RUN["Cloud Run service csci599-a1 - us-west1"]
+    REG --> RUN["Cloud Run service mcp-agent - us-west1"]
     SEC["Google Secret Manager - OpenAI and Tavily keys"] -->|Secret-backed environment variables| RUN
     RUN --> URL["Public HTTPS service URL"]
     RUN --> OPENAI["OpenAI GPT-5 API"]
@@ -220,23 +219,23 @@ The logs identified `list_directory`, `get_current_weather`, and `tavily_search`
 The Dockerfile uses a multi-stage Python 3.13 slim build, installs Node.js/npm for the Node-based MCP servers, and runs the application under a non-root user.
 
 ```powershell
-docker build -t csci599-agent:latest .
+docker build -t mcp-agent:latest .
 
 docker run --rm `
-    --name csci599-agent `
+    --name mcp-agent `
     -p 8000:8080 `
     --env-file .env `
-    csci599-agent:latest
+    mcp-agent:latest
 ```
 
 The container listens on port 8080 internally. The example maps it to port 8000 on the host; use `http://127.0.0.1:8000/chat` to test it. The image was successfully built and started during development.
 
 ## 12. Google Cloud Run deployment
 
-The application has been deployed to:
+Example Cloud Run configuration:
 
-- **Project:** `csci599-mcp-agent-2026`
-- **Service:** `csci599-a1`
+- **Project:** `YOUR_PROJECT_ID`
+- **Service:** `mcp-agent`
 - **Region:** `us-west1`
 - **Ingress:** Public HTTP endpoint (`--allow-unauthenticated`)
 - **Scaling:** Minimum 0 instances, maximum 1 instance
@@ -245,27 +244,6 @@ The application has been deployed to:
 - **Request timeout:** 300 seconds
 - **Credentials:** Google Secret Manager secrets injected into runtime environment variables
 
-To retrieve the verified service URL:
-
-```powershell
-gcloud run services describe csci599-a1 `
-    --project=csci599-mcp-agent-2026 `
-    --region=us-west1 `
-    --format='value(status.url)'
-```
-
-To test it without changing the deployment:
-
-```powershell
-$URL = gcloud run services describe csci599-a1 `
-    --project=csci599-mcp-agent-2026 `
-    --region=us-west1 `
-    --format='value(status.url)'
-
-$body = @{ query = 'Explain MCP in one sentence.'; session_id = 'readme-smoke-test' } | ConvertTo-Json
-(Invoke-RestMethod -Uri "$URL/chat" -Method Post -ContentType 'application/json' -Body $body).response
-```
-
 ### Deployment script
 
 The `deploy.sh` script builds and publishes the Docker image using Google Cloud Build, then deploys the application to Google Cloud Run. API credentials are supplied through Google Secret Manager.
@@ -273,17 +251,17 @@ The `deploy.sh` script builds and publishes the Docker image using Google Cloud 
 Run the script from the project root using Bash (for example, Git Bash on Windows):
 
 ```bash
-bash deploy.sh
+PROJECT_ID=your-project-id bash deploy.sh
 ```
 
-The script targets the `csci599-mcp-agent-2026` project in the `us-west1` region and requires authenticated `gcloud` access and existing Secret Manager secrets.
+Set `PROJECT_ID` to your Google Cloud project. The script defaults to service `mcp-agent` in `us-west1`; override `SERVICE` and `REGION` as needed. It requires authenticated `gcloud` access and existing Secret Manager secrets.
 
 ### Deployment procedure
 
 1. Authenticate `gcloud`, select the correct project, and enable the required Google Cloud services.
 2. Build the multi-stage Docker image and publish it to the project's Artifact Registry / gcr.io-compatible repository using Cloud Build.
 3. Configure the dedicated Cloud Run runtime service account and grant only the required Secret Manager access.
-4. Deploy the image to `csci599-a1` in `us-west1`, allowing unauthenticated requests, with `--min-instances=0` and `--max-instances=1`.
+4. Deploy the image to `mcp-agent` in `us-west1`, allowing unauthenticated requests, with `--min-instances=0` and `--max-instances=1`.
 5. Inject `OPENAI_API_KEY` and `TAVILY_API_KEY` from Secret Manager; do not pass literal credentials in commands or source code.
 6. Verify `/chat`, MCP tools, and memory through the public URL, then inspect Cloud Run logs.
 
